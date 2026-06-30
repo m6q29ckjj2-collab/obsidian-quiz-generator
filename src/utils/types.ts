@@ -31,23 +31,27 @@ export interface ErrorEntry {
 export interface TrueFalse {
 	question: string;
 	answer: boolean;
+	explanation?: string;
 }
 
 export interface MultipleChoice {
 	question: string;
 	options: string[];
 	answer: number;
+	explanation?: string;
 }
 
 export interface SelectAllThatApply {
 	question: string;
 	options: string[];
 	answer: number[];
+	explanation?: string;
 }
 
 export interface FillInTheBlank {
 	question: string;
 	answer: string[];
+	explanation?: string;
 }
 
 export interface Matching {
@@ -56,9 +60,11 @@ export interface Matching {
 		leftOption: string;
 		rightOption: string;
 	}[];
+	explanation?: string;
 }
 
 export interface ShortOrLongAnswer {
 	question: string;
 	answer: string;
+	explanation?: string;
 }

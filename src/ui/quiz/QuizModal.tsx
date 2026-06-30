@@ -138,20 +138,29 @@ const QuizModal = ({
 		return formatInterval(scheduleNext(existing, rating).interval);
 	};
 
-	const renderRatingButtons = () => (
-		<div className="quiz-rating-qg">
-			<div className="quiz-rating-label-qg">How well did you know this?</div>
-			<div className="quiz-rating-buttons-qg">
-				{RATING_CONFIG.map(({ rating, label, cls }, i) => (
-					<button key={rating} className={`quiz-rating-btn-qg ${cls}`} onClick={() => handleRating(rating)}>
-						<span className="rating-btn-label-qg">{label}</span>
-						<span className="rating-btn-interval-qg">{getRatingNextInterval(rating)}</span>
-						<span className="rating-btn-key-qg">{i + 1}{rating === Rating.Good ? " / Space" : ""}</span>
-					</button>
-				))}
+	const renderRatingButtons = () => {
+		const explanation = (quiz[questionIndex] as { explanation?: string }).explanation;
+		return (
+			<div className="quiz-rating-qg">
+				{explanation && (
+					<div className={`quiz-explanation-qg ${pendingAnswer ? "explanation-correct-qg" : "explanation-incorrect-qg"}`}>
+						<span className="explanation-icon-qg">💡</span>
+						<span className="explanation-text-qg">{explanation}</span>
+					</div>
+				)}
+				<div className="quiz-rating-label-qg">How well did you know this?</div>
+				<div className="quiz-rating-buttons-qg">
+					{RATING_CONFIG.map(({ rating, label, cls }, i) => (
+						<button key={rating} className={`quiz-rating-btn-qg ${cls}`} onClick={() => handleRating(rating)}>
+							<span className="rating-btn-label-qg">{label}</span>
+							<span className="rating-btn-interval-qg">{getRatingNextInterval(rating)}</span>
+							<span className="rating-btn-key-qg">{i + 1}{rating === Rating.Good ? " / Space" : ""}</span>
+						</button>
+					))}
+				</div>
 			</div>
-		</div>
-	);
+		);
+	};
 
 	const renderQuestion = () => {
 		const question = quiz[questionIndex];

@@ -497,6 +497,30 @@ FillInTheBlankQuestion, MatchingQuestion, ShortOrLongAnswerQuestion */
 	margin-bottom: 0.6rem;
 }
 
+.quiz-explanation-qg {
+	display: flex;
+	gap: 0.6rem;
+	align-items: flex-start;
+	padding: 0.75rem 1rem;
+	border-radius: 0.5rem;
+	border-left: 3px solid var(--color-yellow);
+	background: color-mix(in srgb, var(--color-yellow) 8%, var(--background-secondary));
+	margin-bottom: 0.75rem;
+}
+
+.explanation-correct-qg {
+	border-left-color: var(--color-green);
+	background: color-mix(in srgb, var(--color-green) 8%, var(--background-secondary));
+}
+
+.explanation-incorrect-qg {
+	border-left-color: var(--color-red);
+	background: color-mix(in srgb, var(--color-red) 8%, var(--background-secondary));
+}
+
+.explanation-icon-qg { flex-shrink: 0; font-size: 1em; }
+.explanation-text-qg { font-size: 0.9em; line-height: 1.5; }
+
 .quiz-rating-buttons-qg {
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
