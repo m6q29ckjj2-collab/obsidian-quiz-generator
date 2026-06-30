@@ -20,11 +20,17 @@
 	}
 
 	.modal-qg .modal-header {
-		padding: 0.6rem 1rem;
+		padding-top: max(0.6rem, env(safe-area-inset-top)) !important;
+		padding-left: max(1rem, env(safe-area-inset-left)) !important;
+		padding-right: max(1rem, env(safe-area-inset-right)) !important;
+		padding-bottom: 0.6rem;
 	}
 
 	.modal-qg .modal-content {
-		padding: 0.75rem 1rem;
+		padding-top: 0.75rem;
+		padding-bottom: max(0.75rem, env(safe-area-inset-bottom)) !important;
+		padding-left: max(1rem, env(safe-area-inset-left)) !important;
+		padding-right: max(1rem, env(safe-area-inset-right)) !important;
 	}
 
 	.quiz-nav-btn-qg {
