@@ -558,12 +558,19 @@ FillInTheBlankQuestion, MatchingQuestion, ShortOrLongAnswerQuestion */
 .rating-btn-key-qg { font-size: 0.7em; color: var(--text-faint); margin-top: 0.1rem; }
 
 @media (max-width: 600px) {
-	.quiz-rating-btn-qg {
-		padding: 1.2rem 0.5rem;
-		min-height: 5rem;
+	.quiz-rating-buttons-qg {
+		grid-template-columns: 1fr;
 	}
-	.rating-btn-label-qg { font-size: 1.2em; }
-	.rating-btn-interval-qg { font-size: 0.85em; }
+
+	.quiz-rating-btn-qg {
+		flex-direction: row;
+		justify-content: space-between;
+		padding: 0.9rem 1.2rem;
+		min-height: 3.2rem;
+	}
+
+	.rating-btn-label-qg { font-size: 1.1em; }
+	.rating-btn-interval-qg { font-size: 0.9em; margin-left: auto; padding-right: 0.5rem; }
 	.rating-btn-key-qg { display: none; }
 }
 
