@@ -19,6 +19,11 @@
 		transform: none !important;
 	}
 
+	.modal-qg .modal-close-button {
+		top: max(0.5rem, env(safe-area-inset-top)) !important;
+		right: max(0.5rem, env(safe-area-inset-right)) !important;
+	}
+
 	.modal-qg .modal-header {
 		padding-top: max(0.6rem, env(safe-area-inset-top)) !important;
 		padding-left: max(1rem, env(safe-area-inset-left)) !important;
