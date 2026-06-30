@@ -50,24 +50,20 @@ export default class QuizReviewer {
 	private calloutParser(fileContents: string): void {
 		const questionCallout = />\s*\[!question][+-]?\s*(.+)\s*/;
 		const answerCallout = />\s*>\s*\[!success].*\s*/;
-		// Skips standalone "Explanation:" label line, then captures the next "> >" line
-		const explanationCapture = /(?:\s*>\s*>\s*Explanation:\s*)?(?:\s*>\s*>\s*([^\n\r]+))?/;
 
 		const choices = this.generateCalloutChoicesRegex();
 		const choicesAnswer = this.generateCalloutChoicesAnswerRegex();
-		// Groups: [1]=question, [2..27]=options, [28..53]=answers, [54]=explanation
 		const multipleChoiceSelectAllThatApplyRegex = new RegExp(
 			questionCallout.source +
 				choices.source +
 				answerCallout.source +
-				choicesAnswer.source +
-				explanationCapture.source,
+				choicesAnswer.source,
 			"gi",
 		);
 		this.matchMultipleChoiceSelectAllThatApply(
 			fileContents,
 			multipleChoiceSelectAllThatApplyRegex,
-			54,
+			fileContents,
 		);
 
 		const groupCallout = />\s*>\s*\[!example].*\s*/;
@@ -79,7 +75,6 @@ export default class QuizReviewer {
 			.replace(/>/g, ">\\s*>");
 		const nestedCalloutSeparator = />\s*/;
 		const matchingAnswer = this.generateCalloutMatchingAnswerRegex();
-		// Groups: [1]=question, [2..14]=left, [15..27]=right, [28..40]=answers, [41]=explanation
 		const matchingRegex = new RegExp(
 			questionCallout.source +
 				groupCallout.source +
@@ -89,25 +84,22 @@ export default class QuizReviewer {
 				groupBChoices +
 				nestedCalloutSeparator.source +
 				answerCallout.source +
-				matchingAnswer.source +
-				explanationCapture.source,
+				matchingAnswer.source,
 			"gi",
 		);
-		this.matchMatching(fileContents, matchingRegex, 41);
+		this.matchMatching(fileContents, matchingRegex, fileContents);
 
 		const trueFalseFillInTheBlankShortOrLongAnswer = />\s*>\s*(.+)/;
-		// Groups: [1]=question, [2]=answer, [3]=explanation
 		const trueFalseFillInTheBlankShortOrLongAnswerRegex = new RegExp(
 			questionCallout.source +
 				answerCallout.source +
-				trueFalseFillInTheBlankShortOrLongAnswer.source +
-				explanationCapture.source,
+				trueFalseFillInTheBlankShortOrLongAnswer.source,
 			"gi",
 		);
 		this.matchTrueFalseFillInTheBlankShortOrLongAnswer(
 			fileContents,
 			trueFalseFillInTheBlankShortOrLongAnswerRegex,
-			3,
+			fileContents,
 		);
 	}
 
@@ -230,7 +222,7 @@ export default class QuizReviewer {
 	private matchMultipleChoiceSelectAllThatApply(
 		fileContents: string,
 		pattern: RegExp,
-		explanationIndex?: number,
+		sourceText?: string,
 	): void {
 		const matches = fileContents.matchAll(pattern);
 		for (const match of matches) {
@@ -238,15 +230,17 @@ export default class QuizReviewer {
 				.slice(2, 28)
 				.filter((option) => typeof option !== "undefined");
 			const answer = match
-				.slice(28, explanationIndex ?? 54)
+				.slice(28)
 				.filter((letter) => typeof letter !== "undefined");
-			const explanation = explanationIndex !== undefined ? match[explanationIndex] : undefined;
 			if (
 				options.length === 0 ||
 				answer.length === 0 ||
 				answer.length > options.length
 			)
 				continue;
+			const explanation = sourceText
+				? this.extractExplanation(sourceText, (match.index ?? 0) + match[0].length)
+				: undefined;
 			if (answer.length === 1) {
 				this.quiz.push({
 					question: match[1],
@@ -271,7 +265,7 @@ export default class QuizReviewer {
 		}
 	}
 
-	private matchMatching(fileContents: string, pattern: RegExp, explanationIndex?: number): void {
+	private matchMatching(fileContents: string, pattern: RegExp, sourceText?: string): void {
 		const matches = fileContents.matchAll(pattern);
 		for (const match of matches) {
 			const leftOptions = match
@@ -280,10 +274,9 @@ export default class QuizReviewer {
 			const rightOptions = match
 				.slice(15, 28)
 				.filter((option) => typeof option !== "undefined");
-			const explanation = explanationIndex !== undefined ? match[explanationIndex] : undefined;
 			const answer: { leftOption: string; rightOption: string }[] = [];
 			match
-				.slice(28, explanationIndex ?? 41)
+				.slice(28)
 				.filter((option) => typeof option !== "undefined")
 				.forEach((pair) => {
 					const [left, right] = pair.split(/\s*-+>\s*/);
@@ -308,6 +301,9 @@ export default class QuizReviewer {
 			)
 				continue;
 
+			const explanation = sourceText
+				? this.extractExplanation(sourceText, (match.index ?? 0) + match[0].length)
+				: undefined;
 			this.quiz.push({
 				question: match[1],
 				answer: answer,
@@ -319,11 +315,13 @@ export default class QuizReviewer {
 	private matchTrueFalseFillInTheBlankShortOrLongAnswer(
 		fileContents: string,
 		pattern: RegExp,
-		explanationIndex?: number,
+		sourceText?: string,
 	): void {
 		const matches = fileContents.matchAll(pattern);
 		for (const match of matches) {
-			const explanation = explanationIndex !== undefined ? match[explanationIndex] : undefined;
+			const explanation = sourceText
+				? this.extractExplanation(sourceText, (match.index ?? 0) + match[0].length)
+				: undefined;
 			if (
 				match[2].toLowerCase() === "true" ||
 				match[2].toLowerCase() === "false"
@@ -347,6 +345,20 @@ export default class QuizReviewer {
 				} as ShortOrLongAnswer);
 			}
 		}
+	}
+
+	private extractExplanation(fileContents: string, matchEnd: number): string | undefined {
+		const remaining = fileContents.slice(matchEnd);
+		const lines: string[] = [];
+		for (const raw of remaining.split(/\r?\n|\r/)) {
+			const inner = raw.match(/^>\s*>(.*)/);
+			if (!inner) break;
+			const content = inner[1].trim();
+			if (!content) continue;
+			if (/^Explanation:\s*$/i.test(content)) continue;
+			lines.push(content);
+		}
+		return lines.length > 0 ? lines.join("\n") : undefined;
 	}
 
 	private escapeSpecialCharacters(pattern: string): RegExp {

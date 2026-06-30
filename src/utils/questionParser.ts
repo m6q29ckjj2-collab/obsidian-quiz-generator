@@ -34,9 +34,21 @@ function matchingAnswerRegex(): RegExp {
 	return new RegExp(parts.join(""));
 }
 
-// Optional explanation inside [!success]. Skips a standalone "Explanation:" label line if present,
-// then captures the next "> >" line as the explanation text.
-const explanationCapture = /(?:\s*>\s*>\s*Explanation:\s*)?(?:\s*>\s*>\s*([^\n\r]+))?/;
+// Collects all "> >" lines after matchEnd as the explanation,
+// skipping a standalone "Explanation:" label line if present.
+function extractExplanation(fileContents: string, matchEnd: number): string | undefined {
+	const remaining = fileContents.slice(matchEnd);
+	const lines: string[] = [];
+	for (const raw of remaining.split(/\r?\n|\r/)) {
+		const inner = raw.match(/^>\s*>(.*)/);
+		if (!inner) break;
+		const content = inner[1].trim();
+		if (!content) continue;
+		if (/^Explanation:\s*$/i.test(content)) continue;
+		lines.push(content);
+	}
+	return lines.length > 0 ? lines.join("\n") : undefined;
+}
 
 export function parseCalloutQuestions(fileContents: string): Question[] {
 	const quiz: Question[] = [];
@@ -47,16 +59,16 @@ export function parseCalloutQuestions(fileContents: string): Question[] {
 	const choicesAnswer = choicesAnswerRegex();
 
 	// Multiple choice / select all that apply
-	// Groups: [1]=question, [2..27]=options, [28..53]=answers, [54]=explanation
+	// Groups: [1]=question, [2..27]=options, [28..53]=answers
 	const mcRegex = new RegExp(
-		questionCallout.source + choices.source + answerCallout.source + choicesAnswer.source + explanationCapture.source,
+		questionCallout.source + choices.source + answerCallout.source + choicesAnswer.source,
 		"gi",
 	);
 	for (const match of fileContents.matchAll(mcRegex)) {
 		const options = match.slice(2, 28).filter(o => o !== undefined);
-		const answer = match.slice(28, 54).filter(a => a !== undefined);
-		const explanation = match[54] ?? undefined;
+		const answer = match.slice(28).filter(a => a !== undefined);
 		if (!options.length || !answer.length || answer.length > options.length) continue;
+		const explanation = extractExplanation(fileContents, (match.index ?? 0) + match[0].length);
 		if (answer.length === 1) {
 			quiz.push({
 				question: match[1],
@@ -75,7 +87,7 @@ export function parseCalloutQuestions(fileContents: string): Question[] {
 	}
 
 	// Matching
-	// Groups: [1]=question, [2..14]=leftOptions, [15..27]=rightOptions, [28..40]=answers, [41]=explanation
+	// Groups: [1]=question, [2..14]=leftOptions, [15..27]=rightOptions, [28..40]=answers
 	const groupCallout = />\s*>\s*\[!example].*\s*/;
 	const groupAChoices = choices.source.substring(0, choices.source.length / 2).replace(/>/g, ">\\s*>");
 	const groupBChoices = choices.source.substring(choices.source.length / 2).replace(/>/g, ">\\s*>");
@@ -83,15 +95,14 @@ export function parseCalloutQuestions(fileContents: string): Question[] {
 	const matchingRegex = new RegExp(
 		questionCallout.source + groupCallout.source + groupAChoices +
 		/>\s*/.source + groupCallout.source + groupBChoices +
-		/>\s*/.source + answerCallout.source + matchingAnswer.source + explanationCapture.source,
+		/>\s*/.source + answerCallout.source + matchingAnswer.source,
 		"gi",
 	);
 	for (const match of fileContents.matchAll(matchingRegex)) {
 		const leftOptions = match.slice(2, 15).filter(o => o !== undefined);
 		const rightOptions = match.slice(15, 28).filter(o => o !== undefined);
-		const explanation = match[41] ?? undefined;
 		const answer: { leftOption: string; rightOption: string }[] = [];
-		match.slice(28, 41).filter(o => o !== undefined).forEach(pair => {
+		match.slice(28).filter(o => o !== undefined).forEach(pair => {
 			const [left, right] = pair.split(/\s*-+>\s*/);
 			const li = left.toLowerCase().charCodeAt(0) - 97;
 			const ri = right.toLowerCase().charCodeAt(0) - "n".charCodeAt(0);
@@ -99,6 +110,7 @@ export function parseCalloutQuestions(fileContents: string): Question[] {
 		});
 		if (!leftOptions.length || !rightOptions.length || !answer.length) continue;
 		if (leftOptions.length !== rightOptions.length || leftOptions.length !== answer.length) continue;
+		const explanation = extractExplanation(fileContents, (match.index ?? 0) + match[0].length);
 		quiz.push({
 			question: match[1],
 			answer,
@@ -107,14 +119,14 @@ export function parseCalloutQuestions(fileContents: string): Question[] {
 	}
 
 	// True/False, Fill in the blank, Short/Long answer
-	// Groups: [1]=question, [2]=answer, [3]=explanation
+	// Groups: [1]=question, [2]=answer
 	const tfFibSlRegex = new RegExp(
-		questionCallout.source + answerCallout.source + />\s*>\s*(.+)/.source + explanationCapture.source,
+		questionCallout.source + answerCallout.source + />\s*>\s*(.+)/.source,
 		"gi",
 	);
 	for (const match of fileContents.matchAll(tfFibSlRegex)) {
 		const ans = match[2];
-		const explanation = match[3] ?? undefined;
+		const explanation = extractExplanation(fileContents, (match.index ?? 0) + match[0].length);
 		if (ans.toLowerCase() === "true" || ans.toLowerCase() === "false") {
 			quiz.push({
 				question: match[1],

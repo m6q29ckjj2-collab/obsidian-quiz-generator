@@ -145,7 +145,11 @@ const QuizModal = ({
 				{explanation && (
 					<div className={`quiz-explanation-qg ${pendingAnswer ? "explanation-correct-qg" : "explanation-incorrect-qg"}`}>
 						<span className="explanation-icon-qg">💡</span>
-						<span className="explanation-text-qg">{explanation}</span>
+						<span className="explanation-text-qg">
+							{explanation.split("\n").map((line, i) => (
+								<span key={i}>{line}{i < explanation.split("\n").length - 1 && <br />}</span>
+							))}
+						</span>
 					</div>
 				)}
 				<div className="quiz-rating-label-qg">How well did you know this?</div>
