@@ -5,9 +5,10 @@ import { TrueFalse } from "../../utils/types";
 interface TrueFalseQuestionProps {
 	app: App;
 	question: TrueFalse;
+	onAnswered?: (correct: boolean) => void;
 }
 
-const TrueFalseQuestion = ({ app, question }: TrueFalseQuestionProps) => {
+const TrueFalseQuestion = ({ app, question, onAnswered }: TrueFalseQuestionProps) => {
 	const [userAnswer, setUserAnswer] = useState<boolean | null>(null);
 	const questionRef = useRef<HTMLDivElement>(null);
 
@@ -31,20 +32,25 @@ const TrueFalseQuestion = ({ app, question }: TrueFalseQuestionProps) => {
 		return "true-false-button-qg";
 	};
 
+	const handleAnswer = (value: boolean) => {
+		setUserAnswer(value);
+		onAnswered?.(value === question.answer);
+	};
+
 	return (
 		<div className="question-container-qg">
 			<div className="question-qg" ref={questionRef} />
 			<div className="true-false-container-qg">
 				<button
 					className={getButtonClass(true)}
-					onClick={() => setUserAnswer(true)}
+					onClick={() => handleAnswer(true)}
 					disabled={userAnswer !== null}
 				>
 					True
 				</button>
 				<button
 					className={getButtonClass(false)}
-					onClick={() => setUserAnswer(false)}
+					onClick={() => handleAnswer(false)}
 					disabled={userAnswer !== null}
 				>
 					False

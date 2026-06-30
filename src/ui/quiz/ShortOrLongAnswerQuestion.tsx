@@ -9,9 +9,10 @@ interface ShortOrLongAnswerQuestionProps {
 	app: App;
 	question: ShortOrLongAnswer;
 	settings: QuizSettings;
+	onAnswered?: (correct: boolean) => void;
 }
 
-const ShortOrLongAnswerQuestion = ({ app, question, settings }: ShortOrLongAnswerQuestionProps) => {
+const ShortOrLongAnswerQuestion = ({ app, question, settings, onAnswered }: ShortOrLongAnswerQuestionProps) => {
 	const [status, setStatus] = useState<"answering" | "evaluating" | "submitted">("answering");
 	const component = useMemo<Component>(() => new Component(), []);
 	const questionRef = useRef<HTMLDivElement>(null);
@@ -34,6 +35,7 @@ const ShortOrLongAnswerQuestion = ({ app, question, settings }: ShortOrLongAnswe
 	const handleSubmit = async (input: string) => {
 		if (input.toLowerCase().trim() === "skip") {
 			setStatus("submitted");
+			onAnswered?.(false);
 			return;
 		}
 
@@ -45,8 +47,10 @@ const ShortOrLongAnswerQuestion = ({ app, question, settings }: ShortOrLongAnswe
 			const similarityPercentage = Math.round(similarity * 100);
 			if (similarityPercentage >= 80) {
 				new Notice(`Correct: ${similarityPercentage}% match`);
+				onAnswered?.(true);
 			} else {
 				new Notice(`Incorrect: ${similarityPercentage}% match`);
+				onAnswered?.(false);
 			}
 			setStatus("submitted");
 		} catch (error) {

@@ -6,9 +6,10 @@ import { shuffleArray } from "../../utils/helpers";
 interface MatchingQuestionProps {
 	app: App;
 	question: Matching;
+	onAnswered?: (correct: boolean) => void;
 }
 
-const MatchingQuestion = ({ app, question }: MatchingQuestionProps) => {
+const MatchingQuestion = ({ app, question, onAnswered }: MatchingQuestionProps) => {
 	const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
 	const [selectedRight, setSelectedRight] = useState<number | null>(null);
 	const [selectedPairs, setSelectedPairs] = useState<{ leftIndex: number, rightIndex: number }[]>([]);
@@ -103,6 +104,16 @@ const MatchingQuestion = ({ app, question }: MatchingQuestionProps) => {
 
 	const handleRightDoubleClick = (rightIndex: number) => {
 		setSelectedPairs(selectedPairs.filter(pair => pair.rightIndex !== rightIndex));
+	};
+
+	const handleSubmitClick = () => {
+		if (status === "answering") {
+			const allCorrect = selectedPairs.every(pair => correctPairsMap.get(pair.leftIndex) === pair.rightIndex);
+			setStatus("submitted");
+			onAnswered?.(allCorrect);
+		} else {
+			setStatus("reviewing");
+		}
 	};
 
 	const getLeftButtonClass = (leftIndex: number): string => {
@@ -204,7 +215,7 @@ const MatchingQuestion = ({ app, question }: MatchingQuestionProps) => {
 			</div>
 			<button
 				className="submit-answer-qg"
-				onClick={() => setStatus(status === "answering" ? "submitted" : "reviewing")}
+				onClick={handleSubmitClick}
 				disabled={
 					selectedPairs.length !== question.answer.length ||
 					status === "reviewing" ||

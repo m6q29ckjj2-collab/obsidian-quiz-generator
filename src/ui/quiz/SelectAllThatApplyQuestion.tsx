@@ -1,75 +1,85 @@
 import { App, Component, MarkdownRenderer } from "obsidian";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SelectAllThatApply } from "../../utils/types";
+import { shuffleArray } from "../../utils/helpers";
 
 interface SelectAllThatApplyQuestionProps {
 	app: App;
 	question: SelectAllThatApply;
+	onAnswered?: (correct: boolean) => void;
 }
 
-const SelectAllThatApplyQuestion = ({ app, question }: SelectAllThatApplyQuestionProps) => {
+const SelectAllThatApplyQuestion = ({ app, question, onAnswered }: SelectAllThatApplyQuestionProps) => {
 	const [userAnswer, setUserAnswer] = useState<number[]>([]);
 	const [submitted, setSubmitted] = useState<boolean>(false);
 	const questionRef = useRef<HTMLDivElement>(null);
 	const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
+	const shuffled = useMemo(
+		() => shuffleArray(question.options.map((opt, i) => ({ opt, i }))),
+		[question],
+	);
+
 	useEffect(() => {
 		const component = new Component();
 
-		question.question.split("\\n").forEach(questionFragment => {
+		question.question.split("\\n").forEach(fragment => {
 			if (questionRef.current) {
-				MarkdownRenderer.render(app, questionFragment, questionRef.current, "", component);
+				MarkdownRenderer.render(app, fragment, questionRef.current, "", component);
 			}
 		});
 
-		buttonRefs.current = buttonRefs.current.slice(0, question.options.length);
-		buttonRefs.current.forEach((button, index) => {
+		buttonRefs.current = buttonRefs.current.slice(0, shuffled.length);
+		buttonRefs.current.forEach((button, idx) => {
 			if (button) {
-				MarkdownRenderer.render(app, question.options[index], button, "", component);
+				MarkdownRenderer.render(app, shuffled[idx].opt, button, "", component);
 			}
 		});
-	}, [app, question]);
+	}, [app, question, shuffled]);
 
-	const toggleSelection = (buttonAnswer: number) => {
-		setUserAnswer(prevUserAnswer => {
-			if (prevUserAnswer.includes(buttonAnswer)) {
-				return prevUserAnswer.filter(answer => answer !== buttonAnswer);
-			} else {
-				return [...prevUserAnswer, buttonAnswer];
-			}
-		});
+	const toggleSelection = (idx: number) => {
+		setUserAnswer(prev =>
+			prev.includes(idx) ? prev.filter(a => a !== idx) : [...prev, idx]
+		);
 	};
 
-	const getButtonClass = (buttonAnswer: number) => {
+	const getButtonClass = (idx: number) => {
 		if (submitted) {
-			const correct = question.answer.includes(buttonAnswer);
-			const selected = userAnswer.includes(buttonAnswer);
+			const correct = question.answer.includes(shuffled[idx].i);
+			const selected = userAnswer.includes(idx);
 			if (correct && selected) return "select-all-that-apply-button-qg correct-choice-qg";
 			if (correct) return "select-all-that-apply-button-qg correct-choice-qg not-selected-qg";
 			if (selected) return "select-all-that-apply-button-qg incorrect-choice-qg";
-		} else if (userAnswer.includes(buttonAnswer)) {
+		} else if (userAnswer.includes(idx)) {
 			return "select-all-that-apply-button-qg selected-choice-qg";
 		}
 		return "select-all-that-apply-button-qg";
+	};
+
+	const handleSubmit = () => {
+		setSubmitted(true);
+		const selectedOriginal = userAnswer.map(idx => shuffled[idx].i).sort((a, b) => a - b);
+		const correctOriginal = [...question.answer].sort((a, b) => a - b);
+		onAnswered?.(JSON.stringify(selectedOriginal) === JSON.stringify(correctOriginal));
 	};
 
 	return (
 		<div className="question-container-qg">
 			<div className="question-qg" ref={questionRef} />
 			<div className="select-all-that-apply-container-qg">
-				{question.options.map((_, index) => (
+				{shuffled.map((_, idx) => (
 					<button
-						key={index}
-						ref={(el) => buttonRefs.current[index] = el}
-						className={getButtonClass(index)}
-						onClick={() => toggleSelection(index)}
+						key={idx}
+						ref={el => buttonRefs.current[idx] = el}
+						className={getButtonClass(idx)}
+						onClick={() => toggleSelection(idx)}
 						disabled={submitted}
 					/>
 				))}
 			</div>
 			<button
 				className="submit-answer-qg"
-				onClick={() => setSubmitted(true)}
+				onClick={handleSubmit}
 				disabled={!userAnswer.length || submitted}
 			>
 				Submit

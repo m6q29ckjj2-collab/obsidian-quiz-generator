@@ -4,6 +4,30 @@ export interface Quiz {
 	questions: Question[];
 }
 
+export interface QuestionRecord {
+	seen: number;
+	correct: number;
+	// SRS scheduling
+	due?: number;
+	interval?: number;
+	ef?: number;
+	reps?: number;
+}
+
+export type QuestionHistory = Record<string, QuestionRecord>;
+
+export interface QuizAttemptResult {
+	question: Question;
+	questionText: string;
+	correct: boolean;
+	rating?: number; // Rating enum value
+}
+
+export interface ErrorEntry {
+	question: Question;
+	addedAt: number;
+}
+
 export interface TrueFalse {
 	question: string;
 	answer: boolean;

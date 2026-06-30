@@ -1,7 +1,7 @@
 import { App, TFile } from "obsidian";
 import { createRoot, Root } from "react-dom/client";
 import { QuizSettings } from "../../settings/config";
-import { Question } from "../../utils/types";
+import { Question, QuizAttemptResult } from "../../utils/types";
 import QuizSaver from "../../services/quizSaver";
 import QuizModalWrapper from "./QuizModalWrapper";
 import { shuffleArray } from "../../utils/helpers";
@@ -12,15 +12,23 @@ export default class QuizModalLogic {
 	private readonly quiz: Question[];
 	private readonly quizSources: TFile[];
 	private readonly quizSaver: QuizSaver;
+	private readonly onComplete?: (results: QuizAttemptResult[]) => Promise<void>;
 	private container: HTMLDivElement | undefined;
 	private root: Root | undefined;
 	private readonly handleEscapePressed: (event: KeyboardEvent) => void;
 
-	constructor(app: App, settings: QuizSettings, quiz: Question[], quizSources: TFile[]) {
+	constructor(
+		app: App,
+		settings: QuizSettings,
+		quiz: Question[],
+		quizSources: TFile[],
+		onComplete?: (results: QuizAttemptResult[]) => Promise<void>,
+	) {
 		this.app = app;
 		this.settings = settings;
 		this.quiz = quiz;
 		this.quizSources = quizSources;
+		this.onComplete = onComplete;
 		this.quizSaver = new QuizSaver(this.app, this.settings, this.quizSources);
 		this.handleEscapePressed = (event: KeyboardEvent): void => {
 			if (event.key === "Escape" && !(event.target instanceof HTMLInputElement)) {
@@ -33,7 +41,7 @@ export default class QuizModalLogic {
 		const quiz = this.settings.randomizeQuestions ? shuffleArray(this.quiz) : this.quiz;
 
 		if (this.settings.autoSave && this.quizSources.length > 0) {
-			await this.quizSaver.saveAllQuestions(quiz); // move into QuizModal or QuizModalWrapper?
+			await this.quizSaver.saveAllQuestions(quiz);
 		}
 
 		this.container = document.body.createDiv();
@@ -44,6 +52,7 @@ export default class QuizModalLogic {
 			quiz: quiz,
 			quizSaver: this.quizSaver,
 			reviewing: this.quizSources.length === 0,
+			onComplete: this.onComplete,
 			handleClose: () => this.removeQuiz(),
 		}));
 		document.body.addEventListener("keydown", this.handleEscapePressed);

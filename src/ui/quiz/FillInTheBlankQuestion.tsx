@@ -6,10 +6,13 @@ import AnswerInput from "../components/AnswerInput";
 interface FillInTheBlankQuestionProps {
 	app: App;
 	question: FillInTheBlank;
+	onAnswered?: (correct: boolean) => void;
 }
 
-const FillInTheBlankQuestion = ({ app, question }: FillInTheBlankQuestionProps) => {
+const FillInTheBlankQuestion = ({ app, question, onAnswered }: FillInTheBlankQuestionProps) => {
 	const [filledBlanks, setFilledBlanks] = useState<string[]>(Array(question.answer.length).fill(""));
+	const [usedSkip, setUsedSkip] = useState(false);
+	const answeredRef = useRef(false);
 	const questionRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -36,6 +39,13 @@ const FillInTheBlankQuestion = ({ app, question }: FillInTheBlankQuestionProps) 
 		}
 	}, [app, question, filledBlanks]);
 
+	useEffect(() => {
+		if (filledBlanks.every(b => b.length > 0) && !answeredRef.current) {
+			answeredRef.current = true;
+			onAnswered?.(!usedSkip);
+		}
+	}, [filledBlanks, usedSkip, onAnswered]);
+
 	const handleSubmit = (input: string) => {
 		const normalizedInput = input.toLowerCase().trim();
 		const blankIndex = question.answer.findIndex(
@@ -49,6 +59,7 @@ const FillInTheBlankQuestion = ({ app, question }: FillInTheBlankQuestionProps) 
 				return newFilledBlanks;
 			});
 		} else if (normalizedInput === "skip") {
+			setUsedSkip(true);
 			setFilledBlanks(question.answer);
 		} else {
 			new Notice("Incorrect");

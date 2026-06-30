@@ -18,6 +18,14 @@ export const countNoteTokens = (noteContents: string): number => {
 	return Math.round(noteContents.length / 4);
 };
 
+export const hashQuestion = (text: string): string => {
+	let hash = 5381;
+	for (let i = 0; i < text.length; i++) {
+		hash = ((hash << 5) + hash) ^ text.charCodeAt(i);
+	}
+	return (hash >>> 0).toString(36);
+};
+
 export const cosineSimilarity = (vec1: number[], vec2: number[]): number => {
 	const dotProduct = (vec1: number[], vec2: number[]): number => {
 		return vec1.reduce((sum, val, i) => sum + val * vec2[i], 0);

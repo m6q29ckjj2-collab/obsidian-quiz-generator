@@ -23,12 +23,16 @@ export const languages: Record<string, string> = {
 	Indonesian: "Bahasa Indonesia",
 };
 
+import { ErrorEntry, QuestionHistory } from "../../utils/types";
+
 export interface GeneralConfig {
 	showNotePath: boolean;
 	showFolderPath: boolean;
 	includeSubfolderNotes: boolean;
 	randomizeQuestions: boolean;
 	language: string;
+	questionHistory: QuestionHistory;
+	errorBank: ErrorEntry[];
 }
 
 export const DEFAULT_GENERAL_SETTINGS: GeneralConfig = {
@@ -37,4 +41,6 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralConfig = {
 	includeSubfolderNotes: true,
 	randomizeQuestions: true,
 	language: "English",
+	questionHistory: {},
+	errorBank: [],
 };
