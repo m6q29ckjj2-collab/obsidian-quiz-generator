@@ -558,6 +558,12 @@ FillInTheBlankQuestion, MatchingQuestion, ShortOrLongAnswerQuestion */
 .rating-btn-key-qg { font-size: 0.7em; color: var(--text-faint); margin-top: 0.1rem; }
 
 @media (max-width: 600px) {
+	.multiple-choice-container-qg,
+	.select-all-that-apply-container-qg,
+	.matching-container-qg {
+		grid-template-columns: 1fr;
+	}
+
 	.quiz-rating-buttons-qg {
 		grid-template-columns: 1fr;
 	}
