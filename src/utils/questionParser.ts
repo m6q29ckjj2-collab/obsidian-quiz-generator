@@ -34,8 +34,9 @@ function matchingAnswerRegex(): RegExp {
 	return new RegExp(parts.join(""));
 }
 
-// Optional explanation line inside [!success]: "> > explanation text"
-const explanationCapture = /(?:\s*>\s*>\s*([^\n\r]+))?/;
+// Optional explanation inside [!success]. Skips a standalone "Explanation:" label line if present,
+// then captures the next "> >" line as the explanation text.
+const explanationCapture = /(?:\s*>\s*>\s*Explanation:\s*)?(?:\s*>\s*>\s*([^\n\r]+))?/;
 
 export function parseCalloutQuestions(fileContents: string): Question[] {
 	const quiz: Question[] = [];

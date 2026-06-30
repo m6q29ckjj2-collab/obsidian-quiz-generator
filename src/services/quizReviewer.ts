@@ -50,7 +50,8 @@ export default class QuizReviewer {
 	private calloutParser(fileContents: string): void {
 		const questionCallout = />\s*\[!question][+-]?\s*(.+)\s*/;
 		const answerCallout = />\s*>\s*\[!success].*\s*/;
-		const explanationCapture = /(?:\s*>\s*>\s*([^\n\r]+))?/;
+		// Skips standalone "Explanation:" label line, then captures the next "> >" line
+		const explanationCapture = /(?:\s*>\s*>\s*Explanation:\s*)?(?:\s*>\s*>\s*([^\n\r]+))?/;
 
 		const choices = this.generateCalloutChoicesRegex();
 		const choicesAnswer = this.generateCalloutChoicesAnswerRegex();
