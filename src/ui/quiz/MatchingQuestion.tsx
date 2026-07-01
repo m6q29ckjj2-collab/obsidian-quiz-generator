@@ -1,7 +1,7 @@
 import { App, Component, MarkdownRenderer } from "obsidian";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Matching } from "../../utils/types";
-import { shuffleArray } from "../../utils/helpers";
+import { shuffleArray, unescapeNewlines } from "../../utils/helpers";
 
 interface MatchingQuestionProps {
 	app: App;
@@ -41,11 +41,9 @@ const MatchingQuestion = ({ app, question, onAnswered }: MatchingQuestionProps) 
 	useEffect(() => {
 		const component = new Component();
 
-		question.question.split("\\n").forEach(questionFragment => {
-			if (questionRef.current) {
-				MarkdownRenderer.render(app, questionFragment, questionRef.current, "", component);
-			}
-		});
+		if (questionRef.current) {
+			MarkdownRenderer.render(app, unescapeNewlines(question.question), questionRef.current, "", component);
+		}
 
 		buttonRefs.current = buttonRefs.current.slice(0, question.answer.length * 2);
 		question.answer.forEach((_, index) => {

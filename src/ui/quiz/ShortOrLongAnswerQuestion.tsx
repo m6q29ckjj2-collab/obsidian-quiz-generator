@@ -1,6 +1,7 @@
 import { App, Component, MarkdownRenderer, Notice } from "obsidian";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ShortOrLongAnswer } from "../../utils/types";
+import { unescapeNewlines } from "../../utils/helpers";
 import { QuizSettings } from "../../settings/config";
 import GeneratorFactory from "../../generators/generatorFactory";
 import AnswerInput from "../components/AnswerInput";
@@ -19,11 +20,9 @@ const ShortOrLongAnswerQuestion = ({ app, question, settings, onAnswered }: Shor
 	const answerRef = useRef<HTMLButtonElement>(null);
 
 	useEffect(() => {
-		question.question.split("\\n").forEach(questionFragment => {
-			if (questionRef.current) {
-				MarkdownRenderer.render(app, questionFragment, questionRef.current, "", component);
-			}
-		});
+		if (questionRef.current) {
+			MarkdownRenderer.render(app, unescapeNewlines(question.question), questionRef.current, "", component);
+		}
 	}, [app, question, component]);
 
 	useEffect(() => {

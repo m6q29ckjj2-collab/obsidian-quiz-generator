@@ -6,6 +6,16 @@ import QuizSaver from "../../services/quizSaver";
 import QuizModalWrapper from "./QuizModalWrapper";
 import { shuffleArray } from "../../utils/helpers";
 
+export interface QuizResumeState {
+	questionIndex: number;
+	answers: (boolean | null)[];
+	ratings: (number | null)[];
+}
+
+interface QuizProgress extends QuizResumeState {
+	view: "quiz" | "results";
+}
+
 export default class QuizModalLogic {
 	private readonly app: App;
 	private readonly settings: QuizSettings;
@@ -13,6 +23,9 @@ export default class QuizModalLogic {
 	private readonly quizSources: TFile[];
 	private readonly quizSaver: QuizSaver;
 	private readonly onComplete?: (results: QuizAttemptResult[]) => Promise<void>;
+	private readonly onExit?: (state: QuizResumeState | null) => void;
+	private readonly initialState?: QuizResumeState;
+	private latestProgress: QuizProgress | undefined;
 	private container: HTMLDivElement | undefined;
 	private root: Root | undefined;
 	private readonly handleEscapePressed: (event: KeyboardEvent) => void;
@@ -23,12 +36,16 @@ export default class QuizModalLogic {
 		quiz: Question[],
 		quizSources: TFile[],
 		onComplete?: (results: QuizAttemptResult[]) => Promise<void>,
+		onExit?: (state: QuizResumeState | null) => void,
+		initialState?: QuizResumeState,
 	) {
 		this.app = app;
 		this.settings = settings;
 		this.quiz = quiz;
 		this.quizSources = quizSources;
 		this.onComplete = onComplete;
+		this.onExit = onExit;
+		this.initialState = initialState;
 		this.quizSaver = new QuizSaver(this.app, this.settings, this.quizSources);
 		this.handleEscapePressed = (event: KeyboardEvent): void => {
 			if (event.key === "Escape" && !(event.target instanceof HTMLInputElement)) {
@@ -38,7 +55,8 @@ export default class QuizModalLogic {
 	}
 
 	public async renderQuiz(): Promise<void> {
-		const quiz = this.settings.randomizeQuestions ? shuffleArray(this.quiz) : this.quiz;
+		// A resumed quiz keeps its saved order; otherwise apply the usual shuffle.
+		const quiz = !this.initialState && this.settings.randomizeQuestions ? shuffleArray(this.quiz) : this.quiz;
 
 		if (this.settings.autoSave && this.quizSources.length > 0) {
 			await this.quizSaver.saveAllQuestions(quiz);
@@ -54,11 +72,23 @@ export default class QuizModalLogic {
 			reviewing: this.quizSources.length === 0,
 			onComplete: this.onComplete,
 			handleClose: () => this.removeQuiz(),
+			initialState: this.initialState,
+			onProgress: (progress: QuizProgress) => { this.latestProgress = progress; },
 		}));
 		document.body.addEventListener("keydown", this.handleEscapePressed);
 	}
 
 	private removeQuiz(): void {
+		if (this.onExit) {
+			const progress = this.latestProgress;
+			const hasProgress = !!progress && progress.view === "quiz" &&
+				(progress.questionIndex > 0 || progress.answers.some(a => a !== null));
+			this.onExit(hasProgress ? {
+				questionIndex: progress!.questionIndex,
+				answers: progress!.answers,
+				ratings: progress!.ratings,
+			} : null);
+		}
 		this.root?.unmount();
 		this.container?.remove();
 		document.body.removeEventListener("keydown", this.handleEscapePressed);

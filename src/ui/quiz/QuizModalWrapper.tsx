@@ -3,6 +3,7 @@ import { QuizSettings } from "../../settings/config";
 import { Question, QuizAttemptResult } from "../../utils/types";
 import QuizModal from "./QuizModal";
 import QuizSaver from "../../services/quizSaver";
+import { QuizResumeState } from "./quizModalLogic";
 
 interface QuizModalWrapperProps {
 	app: App;
@@ -12,9 +13,13 @@ interface QuizModalWrapperProps {
 	reviewing: boolean;
 	onComplete?: (results: QuizAttemptResult[]) => Promise<void>;
 	handleClose: () => void;
+	initialState?: QuizResumeState;
+	onProgress?: (state: QuizResumeState & { view: "quiz" | "results" }) => void;
 }
 
-const QuizModalWrapper = ({ app, settings, quiz, quizSaver, reviewing, onComplete, handleClose }: QuizModalWrapperProps) => {
+const QuizModalWrapper = ({
+	app, settings, quiz, quizSaver, reviewing, onComplete, handleClose, initialState, onProgress,
+}: QuizModalWrapperProps) => {
 	return <QuizModal
 		app={app}
 		settings={settings}
@@ -23,6 +28,8 @@ const QuizModalWrapper = ({ app, settings, quiz, quizSaver, reviewing, onComplet
 		reviewing={reviewing}
 		onComplete={onComplete}
 		handleClose={handleClose}
+		initialState={initialState}
+		onProgress={onProgress}
 	/>;
 };
 

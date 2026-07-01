@@ -28,6 +28,28 @@ export interface ErrorEntry {
 	addedAt: number;
 }
 
+// One finished quiz (a "block") — recorded once when the user finishes or completes
+// the last question, so statistics (activity calendar, per-note completion counts,
+// mistake log) can be reconstructed without re-deriving them from ephemeral state.
+export interface QuizAttemptSession {
+	timestamp: number;
+	sourceLabel: string;
+	correct: number;
+	incorrect: number;
+	mistakes: string[];
+}
+
+// An unfinished quiz closed mid-way through. Stores the exact question set/order shown
+// (not re-derived) so reopening the same source resumes precisely where it left off.
+export interface PausedQuizState {
+	sourceLabel: string;
+	quiz: Question[];
+	questionIndex: number;
+	answers: (boolean | null)[];
+	ratings: (number | null)[];
+	timestamp: number;
+}
+
 export interface TrueFalse {
 	question: string;
 	answer: boolean;

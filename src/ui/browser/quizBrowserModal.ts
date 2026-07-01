@@ -1,6 +1,6 @@
 import { App, Modal, Scope, TFile } from "obsidian";
 import { QuizSettings } from "../../settings/config";
-import { Question, QuizAttemptResult } from "../../utils/types";
+import { PausedQuizState, Question, QuizAttemptResult } from "../../utils/types";
 import { hashQuestion, shuffleArray } from "../../utils/helpers";
 import { isDue } from "../../utils/srs";
 import { parseCalloutQuestions } from "../../utils/questionParser";
@@ -30,14 +30,21 @@ function createNode(name: string): TreeNode {
 
 export default class QuizBrowserModal extends Modal {
 	private readonly settings: QuizSettings;
-	private readonly saveStats: (results: QuizAttemptResult[]) => Promise<void>;
+	private readonly saveStats: (results: QuizAttemptResult[], sourceLabel?: string) => Promise<void>;
+	private readonly savePausedQuiz: (state: PausedQuizState | null) => Promise<void>;
 	private readonly root: TreeNode = createNode("root");
 	private fileStats = new Map<string, FileStats>();
 
-	constructor(app: App, settings: QuizSettings, saveStats: (results: QuizAttemptResult[]) => Promise<void>) {
+	constructor(
+		app: App,
+		settings: QuizSettings,
+		saveStats: (results: QuizAttemptResult[], sourceLabel?: string) => Promise<void>,
+		savePausedQuiz: (state: PausedQuizState | null) => Promise<void>,
+	) {
 		super(app);
 		this.settings = settings;
 		this.saveStats = saveStats;
+		this.savePausedQuiz = savePausedQuiz;
 		this.scope = new Scope(this.app.scope);
 		this.scope.register([], "Escape", () => this.close());
 		this.modalEl.addClass("modal-qg");
@@ -118,6 +125,7 @@ export default class QuizBrowserModal extends Modal {
 
 	private render(): void {
 		this.contentEl.empty();
+		this.renderPausedPanel();
 		this.renderErrorBank();
 		this.renderDuePanel();
 
@@ -132,6 +140,38 @@ export default class QuizBrowserModal extends Modal {
 
 		const tree = this.contentEl.createDiv("browser-tree-qg");
 		this.renderNode(tree, this.root, 0);
+	}
+
+	private renderPausedPanel(): void {
+		const paused = this.settings.pausedQuiz;
+		if (!paused) return;
+
+		const panel = this.contentEl.createDiv("paused-panel-qg");
+		const left = panel.createDiv("paused-panel-left-qg");
+		left.createSpan({ cls: "paused-panel-icon-qg", text: "⏸" });
+		const info = left.createDiv("paused-panel-info-qg");
+		info.createSpan({ cls: "paused-panel-title-qg", text: `Paused: ${paused.sourceLabel}` });
+		const answered = paused.answers.filter(a => a !== null).length;
+		info.createSpan({
+			cls: "paused-panel-count-qg",
+			text: `Question ${paused.questionIndex + 1} of ${paused.quiz.length} · ${answered} answered`,
+		});
+
+		const btn = panel.createEl("button", { cls: "paused-panel-btn-qg", text: "Continue" });
+		btn.addEventListener("click", async () => {
+			this.close();
+			const onExit = (state: { questionIndex: number; answers: (boolean | null)[]; ratings: (number | null)[] } | null) =>
+				void this.savePausedQuiz(state ? { ...state, quiz: paused.quiz, sourceLabel: paused.sourceLabel, timestamp: Date.now() } : null);
+			await new QuizModalLogic(
+				this.app,
+				this.settings,
+				paused.quiz,
+				[],
+				results => this.saveStats(results, paused.sourceLabel),
+				onExit,
+				{ questionIndex: paused.questionIndex, answers: paused.answers, ratings: paused.ratings },
+			).renderQuiz();
+		});
 	}
 
 	private renderDuePanel(): void {
@@ -154,13 +194,7 @@ export default class QuizBrowserModal extends Modal {
 			const dueQuestions = this.collectDueQuestions();
 			if (!dueQuestions.length) return;
 			this.close();
-			await new QuizModalLogic(
-				this.app,
-				this.settings,
-				shuffleArray(dueQuestions),
-				[],
-				this.saveStats,
-			).renderQuiz();
+			await this.openAggregateQuiz("Due Review", shuffleArray(dueQuestions));
 		});
 	}
 
@@ -178,14 +212,29 @@ export default class QuizBrowserModal extends Modal {
 		const btn = panel.createEl("button", { cls: "error-bank-btn-qg", text: "Practice" });
 		btn.addEventListener("click", async () => {
 			this.close();
-			await new QuizModalLogic(
-				this.app,
-				this.settings,
-				shuffleArray([...bank.map(e => e.question)]),
-				[],
-				this.saveStats,
-			).renderQuiz();
+			await this.openAggregateQuiz("Error Bank", shuffleArray([...bank.map(e => e.question)]));
 		});
+	}
+
+	// Shared by the Due Review and Error Bank buttons: resumes a paused session for the
+	// same aggregate label if one exists, otherwise starts fresh with freshQuestions.
+	private async openAggregateQuiz(sourceLabel: string, freshQuestions: Question[]): Promise<void> {
+		const paused = this.settings.pausedQuiz;
+		const resuming = !!paused && paused.sourceLabel === sourceLabel;
+		const quiz = resuming ? paused!.quiz : freshQuestions;
+
+		const onExit = (state: { questionIndex: number; answers: (boolean | null)[]; ratings: (number | null)[] } | null) =>
+			void this.savePausedQuiz(state ? { ...state, quiz, sourceLabel, timestamp: Date.now() } : null);
+
+		await new QuizModalLogic(
+			this.app,
+			this.settings,
+			quiz,
+			[],
+			results => this.saveStats(results, sourceLabel),
+			onExit,
+			resuming ? { questionIndex: paused!.questionIndex, answers: paused!.answers, ratings: paused!.ratings } : undefined,
+		).renderQuiz();
 	}
 
 	private collectDueQuestions(): Question[] {
@@ -245,7 +294,7 @@ export default class QuizBrowserModal extends Modal {
 
 		row.addEventListener("click", async () => {
 			this.close();
-			await new QuizReviewer(this.app, this.settings, this.saveStats).openQuiz(file);
+			await new QuizReviewer(this.app, this.settings, this.saveStats, this.savePausedQuiz).openQuiz(file);
 		});
 	}
 

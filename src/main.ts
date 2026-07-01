@@ -2,18 +2,22 @@ import { Menu, MenuItem, Plugin, TAbstractFile, TFile } from "obsidian";
 import { DEFAULT_SETTINGS, QuizSettings } from "./settings/config";
 import SelectorModal from "./ui/selector/selectorModal";
 import QuizBrowserModal from "./ui/browser/quizBrowserModal";
+import StatsModal from "./ui/stats/statsModal";
 import QuizSettingsTab from "./settings/settings";
 import QuizReviewer from "./services/quizReviewer";
-import { QuizAttemptResult } from "./utils/types";
+import { PausedQuizState, QuizAttemptResult } from "./utils/types";
 import { hashQuestion } from "./utils/helpers";
 import { Rating, scheduleNext } from "./utils/srs";
+
+const MAX_ATTEMPT_SESSIONS = 2000;
 
 export default class QuizGenerator extends Plugin {
 	public settings: QuizSettings = DEFAULT_SETTINGS;
 
 	async onload(): Promise<void> {
-		const saveStats = async (results: QuizAttemptResult[]): Promise<void> => {
+		const saveStats = async (results: QuizAttemptResult[], sourceLabel = "Untitled quiz"): Promise<void> => {
 			if (!this.settings.errorBank) this.settings.errorBank = [];
+			if (!this.settings.attemptHistory) this.settings.attemptHistory = [];
 
 			const correctHashes = new Set(
 				results.filter(r => r.correct).map(r => hashQuestion(r.questionText))
@@ -57,6 +61,22 @@ export default class QuizGenerator extends Plugin {
 				}
 			}
 
+			this.settings.attemptHistory.push({
+				timestamp: Date.now(),
+				sourceLabel,
+				correct: results.filter(r => r.correct).length,
+				incorrect: results.filter(r => !r.correct).length,
+				mistakes: results.filter(r => !r.correct).map(r => r.questionText),
+			});
+			if (this.settings.attemptHistory.length > MAX_ATTEMPT_SESSIONS) {
+				this.settings.attemptHistory = this.settings.attemptHistory.slice(-MAX_ATTEMPT_SESSIONS);
+			}
+
+			await this.saveSettings();
+		};
+
+		const savePausedQuiz = async (state: PausedQuizState | null): Promise<void> => {
+			this.settings.pausedQuiz = state;
 			await this.saveSettings();
 		};
 
@@ -73,14 +93,26 @@ export default class QuizGenerator extends Plugin {
 		});
 
 		this.addRibbonIcon("library", "Quiz Browser", (): void => {
-			new QuizBrowserModal(this.app, this.settings, saveStats).open();
+			new QuizBrowserModal(this.app, this.settings, saveStats, savePausedQuiz).open();
 		});
 
 		this.addCommand({
 			id: "open-quiz-browser",
 			name: "Open quiz browser",
 			callback: (): void => {
-				new QuizBrowserModal(this.app, this.settings, saveStats).open();
+				new QuizBrowserModal(this.app, this.settings, saveStats, savePausedQuiz).open();
+			}
+		});
+
+		this.addRibbonIcon("bar-chart-3", "Quiz Statistics", (): void => {
+			new StatsModal(this.app, this.settings).open();
+		});
+
+		this.addCommand({
+			id: "open-quiz-statistics",
+			name: "Open quiz statistics",
+			callback: (): void => {
+				new StatsModal(this.app, this.settings).open();
 			}
 		});
 
@@ -88,7 +120,7 @@ export default class QuizGenerator extends Plugin {
 			id: "open-quiz-from-active-note",
 			name: "Open quiz from active note",
 			callback: (): void => {
-				new QuizReviewer(this.app, this.settings, saveStats).openQuiz(this.app.workspace.getActiveFile());
+				new QuizReviewer(this.app, this.settings, saveStats, savePausedQuiz).openQuiz(this.app.workspace.getActiveFile());
 			}
 		});
 
@@ -100,7 +132,7 @@ export default class QuizGenerator extends Plugin {
 							.setTitle("Open quiz from this note")
 							.setIcon("scroll-text")
 							.onClick((): void => {
-								new QuizReviewer(this.app, this.settings, saveStats).openQuiz(file);
+								new QuizReviewer(this.app, this.settings, saveStats, savePausedQuiz).openQuiz(file);
 							});
 					});
 				}

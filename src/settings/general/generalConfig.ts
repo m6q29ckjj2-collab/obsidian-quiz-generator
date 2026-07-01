@@ -23,7 +23,7 @@ export const languages: Record<string, string> = {
 	Indonesian: "Bahasa Indonesia",
 };
 
-import { ErrorEntry, QuestionHistory } from "../../utils/types";
+import { ErrorEntry, PausedQuizState, QuestionHistory, QuizAttemptSession } from "../../utils/types";
 
 export interface GeneralConfig {
 	showNotePath: boolean;
@@ -33,6 +33,8 @@ export interface GeneralConfig {
 	language: string;
 	questionHistory: QuestionHistory;
 	errorBank: ErrorEntry[];
+	attemptHistory: QuizAttemptSession[];
+	pausedQuiz: PausedQuizState | null;
 }
 
 export const DEFAULT_GENERAL_SETTINGS: GeneralConfig = {
@@ -43,4 +45,6 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralConfig = {
 	language: "English",
 	questionHistory: {},
 	errorBank: [],
+	attemptHistory: [],
+	pausedQuiz: null,
 };

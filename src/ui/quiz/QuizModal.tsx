@@ -20,6 +20,7 @@ import FillInTheBlankQuestion from "./FillInTheBlankQuestion";
 import MatchingQuestion from "./MatchingQuestion";
 import ShortOrLongAnswerQuestion from "./ShortOrLongAnswerQuestion";
 import QuizSaver from "../../services/quizSaver";
+import { QuizResumeState } from "./quizModalLogic";
 
 interface QuizModalProps {
 	app: App;
@@ -29,6 +30,8 @@ interface QuizModalProps {
 	reviewing: boolean;
 	onComplete?: (results: QuizAttemptResult[]) => Promise<void>;
 	handleClose: () => void;
+	initialState?: QuizResumeState;
+	onProgress?: (state: QuizResumeState & { view: "quiz" | "results" }) => void;
 }
 
 const PASS_THRESHOLD = 0.7;
@@ -48,13 +51,23 @@ const QuizModal = ({
 	reviewing,
 	onComplete,
 	handleClose,
+	initialState,
+	onProgress,
 }: QuizModalProps) => {
-	const [questionIndex, setQuestionIndex] = useState(0);
+	const [questionIndex, setQuestionIndex] = useState(initialState?.questionIndex ?? 0);
 	const [savedQuestions, setSavedQuestions] = useState<boolean[]>(Array(quiz.length).fill(reviewing));
-	const [answers, setAnswers] = useState<(boolean | null)[]>(Array(quiz.length).fill(null));
-	const [ratings, setRatings] = useState<(Rating | null)[]>(Array(quiz.length).fill(null));
+	const [answers, setAnswers] = useState<(boolean | null)[]>(
+		initialState?.answers ?? Array(quiz.length).fill(null)
+	);
+	const [ratings, setRatings] = useState<(Rating | null)[]>(
+		(initialState?.ratings as (Rating | null)[] | undefined) ?? Array(quiz.length).fill(null)
+	);
 	const [pendingAnswer, setPendingAnswer] = useState<boolean | null>(null);
 	const [view, setView] = useState<"quiz" | "results">("quiz");
+
+	useEffect(() => {
+		onProgress?.({ view, questionIndex, answers, ratings });
+	}, [onProgress, view, questionIndex, answers, ratings]);
 
 	const currentRecord = settings.questionHistory?.[hashQuestion(quiz[questionIndex]?.question ?? "")];
 

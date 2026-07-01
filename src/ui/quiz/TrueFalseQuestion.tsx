@@ -1,6 +1,7 @@
 import { App, Component, MarkdownRenderer } from "obsidian";
 import { useEffect, useRef, useState } from "react";
 import { TrueFalse } from "../../utils/types";
+import { unescapeNewlines } from "../../utils/helpers";
 
 interface TrueFalseQuestionProps {
 	app: App;
@@ -15,11 +16,9 @@ const TrueFalseQuestion = ({ app, question, onAnswered }: TrueFalseQuestionProps
 	useEffect(() => {
 		const component = new Component();
 
-		question.question.split("\\n").forEach(questionFragment => {
-			if (questionRef.current) {
-				MarkdownRenderer.render(app, questionFragment, questionRef.current, "", component);
-			}
-		});
+		if (questionRef.current) {
+			MarkdownRenderer.render(app, unescapeNewlines(question.question), questionRef.current, "", component);
+		}
 	}, [app, question]);
 
 	const getButtonClass = (buttonAnswer: boolean) => {

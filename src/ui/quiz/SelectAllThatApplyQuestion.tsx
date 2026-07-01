@@ -1,7 +1,7 @@
 import { App, Component, MarkdownRenderer } from "obsidian";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SelectAllThatApply } from "../../utils/types";
-import { shuffleArray } from "../../utils/helpers";
+import { shuffleArray, unescapeNewlines } from "../../utils/helpers";
 
 interface SelectAllThatApplyQuestionProps {
 	app: App;
@@ -23,11 +23,9 @@ const SelectAllThatApplyQuestion = ({ app, question, onAnswered }: SelectAllThat
 	useEffect(() => {
 		const component = new Component();
 
-		question.question.split("\\n").forEach(fragment => {
-			if (questionRef.current) {
-				MarkdownRenderer.render(app, fragment, questionRef.current, "", component);
-			}
-		});
+		if (questionRef.current) {
+			MarkdownRenderer.render(app, unescapeNewlines(question.question), questionRef.current, "", component);
+		}
 
 		buttonRefs.current = buttonRefs.current.slice(0, shuffled.length);
 		buttonRefs.current.forEach((button, idx) => {

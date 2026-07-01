@@ -1,5 +1,11 @@
 import { setIcon, setTooltip } from "obsidian";
 
+// Question text stores paragraph breaks as a literal "\n" (see questionParser.ts) so it
+// stays on one line in the note. Turn it back into a real newline before rendering so
+// multi-line markdown (e.g. fenced code blocks) is rendered as one coherent document
+// instead of each line being rendered independently.
+export const unescapeNewlines = (text: string): string => text.replace(/\\n/g, "\n");
+
 export const shuffleArray = <T>(array: T[]): T[] => {
 	const newArray = [...array];
 	for (let i = newArray.length - 1; i > 0; i--) {

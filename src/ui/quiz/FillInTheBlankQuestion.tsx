@@ -1,6 +1,7 @@
 import { App, Component, MarkdownRenderer, Notice } from "obsidian";
 import { useEffect, useRef, useState } from "react";
 import { FillInTheBlank } from "../../utils/types";
+import { unescapeNewlines } from "../../utils/helpers";
 import AnswerInput from "../components/AnswerInput";
 
 interface FillInTheBlankQuestionProps {
@@ -31,11 +32,7 @@ const FillInTheBlankQuestion = ({ app, question, onAnswered }: FillInTheBlankQue
 			questionRef.current.empty();
 			const component = new Component();
 
-			generateQuestion().split("\\n").forEach(questionFragment => {
-				if (questionRef.current) {
-					MarkdownRenderer.render(app, questionFragment, questionRef.current, "", component);
-				}
-			});
+			MarkdownRenderer.render(app, unescapeNewlines(generateQuestion()), questionRef.current, "", component);
 		}
 	}, [app, question, filledBlanks]);
 
