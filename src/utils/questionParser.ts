@@ -53,6 +53,11 @@ function extractExplanation(fileContents: string, matchEnd: number): string | un
 export function parseCalloutQuestions(fileContents: string): Question[] {
 	const quiz: Question[] = [];
 
+	// Obsidian inserts blank connector lines (e.g. ">" or ">>") between a callout's
+	// content and a nested callout so it renders as nested. These carry no content,
+	// but their extra ">" breaks the fixed ">"-count patterns below, so strip them.
+	fileContents = fileContents.replace(/^[ \t]*(?:>[ \t]*)+\r?\n/gm, "");
+
 	const questionCallout = />\s*\[!question][+-]?\s*(.+)\s*/;
 	const answerCallout = />\s*>\s*\[!success].*\s*/;
 	const choices = choicesRegex();
